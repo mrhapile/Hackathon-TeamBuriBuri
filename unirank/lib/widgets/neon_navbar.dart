@@ -1,97 +1,78 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import '../feed/feed_screen.dart';
+import '../screens/map_screen.dart';
+import '../screens/chat_screen.dart';
+import '../profile/profile_screen.dart';
 
-class NeonNavBar extends StatelessWidget {
-  final int selectedIndex;
-  final Function(int) onTap;
-  const NeonNavBar({super.key, this.selectedIndex = 0, required this.onTap});
+class NeonNavbar extends StatefulWidget {
+  const NeonNavbar({super.key});
+
+  @override
+  State<NeonNavbar> createState() => _NeonNavbarState();
+}
+
+class _NeonNavbarState extends State<NeonNavbar> {
+  int currentIndex = 0;
+  final List<Widget> pages = [
+    const FeedScreen(),
+    const MapScreen(),
+    const ChatScreen(),
+    const ProfileScreen(),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: UniRankTheme.glassDecoration.copyWith(
-        borderRadius: BorderRadius.circular(32),
-        color: Colors.black.withOpacity(0.6),
-      ),
-      child: SafeArea(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () => onTap(0),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        gradient: UniRankTheme.purpleGradient,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [UniRankTheme.neonGlow],
-                      ),
-                      child: const Icon(Icons.school, color: Colors.white),
-                    ),
-                    const SizedBox(width: 12),
-                    Text('UniRank', style: UniRankTheme.heading(20)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 32),
-              _navButton(context, 'Discover', 0),
-              const SizedBox(width: 12),
-              _navButton(context, 'Messages', 1),
-              const SizedBox(width: 12),
-              _navButton(context, 'Settings', 2),
-              const SizedBox(width: 12),
-              GestureDetector(
-                onTap: () => onTap(10), // chat index
-                child: Container(
-                  padding: EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 20),
-                ),
-              )
-            ],
+    return Scaffold(
+      backgroundColor: UniRankTheme.bg,
+      body: pages[currentIndex],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: UniRankTheme.border)),
+        ),
+        child: SafeArea(
+          child: Container(
+            height: 60,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(Icons.home_filled, 'Feed', 0),
+                _buildNavItem(Icons.map_outlined, 'Map', 1),
+                _buildNavItem(Icons.chat_bubble_outline_rounded, 'Chat', 2),
+                _buildNavItem(Icons.person_outline_rounded, 'Profile', 3),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _navButton(BuildContext context, String title, int index) {
-    bool isActive = selectedIndex == index;
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final bool isSelected = currentIndex == index;
     return GestureDetector(
-      onTap: () => onTap(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: isActive
-            ? BoxDecoration(
-                gradient: UniRankTheme.purpleGradient,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: UniRankTheme.neonPurple1.withOpacity(0.4),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  )
-                ],
-              )
-            : BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
-              ),
-        child: Text(
-          title,
-          style: isActive
-              ? UniRankTheme.heading(14)
-              : UniRankTheme.body(14).copyWith(color: Colors.white60),
-        ),
+      onTap: () => setState(() => currentIndex = index),
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: isSelected ? const Color(0xFF3CB371) : UniRankTheme.textSecondary,
+            size: 26,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? const Color(0xFF3CB371) : UniRankTheme.textSecondary,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

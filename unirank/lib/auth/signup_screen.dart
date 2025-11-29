@@ -62,13 +62,15 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await _authService.signUp(
+      await _authService.signUpWithEmailPassword(
         email: email,
         password: password,
-        name: name,
-        branch: branch,
-        year: year,
-        college: college,
+        data: {
+          'full_name': name,
+          'branch': branch,
+          'year': year,
+          'college': college,
+        },
       );
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/feed');
