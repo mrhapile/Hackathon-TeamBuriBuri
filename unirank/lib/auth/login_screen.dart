@@ -28,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     setState(() => _isLoading = true);
     try {
-      await _authService.signInWithPassword(
+      await _authService.signInWithEmailPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );

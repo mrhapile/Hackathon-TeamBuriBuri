@@ -4,14 +4,12 @@ import 'soft_card.dart';
 
 class GreenHeatmap extends StatelessWidget {
   final String title;
-  final int rows;
-  final int cols;
+  final Map<DateTime, int>? data;
 
   const GreenHeatmap({
     super.key,
     required this.title,
-    this.rows = 7,
-    this.cols = 13, // Approx 3 months
+    this.data,
   });
 
   Color _getColor(int value) {
@@ -31,21 +29,31 @@ class GreenHeatmap extends StatelessWidget {
           const SizedBox(height: 16),
           LayoutBuilder(
             builder: (context, constraints) {
+              const int rows = 7;
+              const int cols = 13; // Approx 3 months
               final double itemSize = (constraints.maxWidth - (cols - 1) * 4) / cols;
+              
+              // Generate dates for the last 13 weeks
+              final now = DateTime.now();
+              final startDate = now.subtract(const Duration(days: rows * cols - 1));
+
               return Wrap(
                 spacing: 4,
                 runSpacing: 4,
                 children: List.generate(rows * cols, (index) {
-                  // Simulate random data
-                  final int value = (index * 7 + 3) % 10;
-                  final int displayValue = value > 2 ? value : 0;
+                  final date = startDate.add(Duration(days: index));
+                  final normalizedDate = DateTime(date.year, date.month, date.day);
+                  final value = data?[normalizedDate] ?? 0;
                   
-                  return Container(
-                    width: itemSize,
-                    height: itemSize,
-                    decoration: BoxDecoration(
-                      color: _getColor(displayValue),
-                      borderRadius: BorderRadius.circular(4),
+                  return Tooltip(
+                    message: '${date.day}/${date.month}: $value contributions',
+                    child: Container(
+                      width: itemSize,
+                      height: itemSize,
+                      decoration: BoxDecoration(
+                        color: _getColor(value),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                   );
                 }),

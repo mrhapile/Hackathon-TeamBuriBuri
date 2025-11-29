@@ -1,6 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme.dart';
-import '../data/sample_data.dart';
+import '../services/post_service.dart';
+import '../services/profile_service.dart';
+import '../profile/user_profile.dart';
 import '../widgets/create_post_widgets.dart';
 
 class CreatePostScreen extends StatefulWidget {
@@ -13,15 +18,76 @@ class CreatePostScreen extends StatefulWidget {
 class _CreatePostScreenState extends State<CreatePostScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isPostEnabled = false;
+  bool _isLoading = false;
+  UserProfile? _currentUser;
+  File? _selectedImage;
 
   @override
   void initState() {
     super.initState();
+    _fetchUser();
     _controller.addListener(() {
       setState(() {
         _isPostEnabled = _controller.text.isNotEmpty;
       });
     });
+  }
+
+  Future<void> _fetchUser() async {
+    final profile = await ProfileService().getCurrentProfile();
+    if (mounted) {
+      setState(() {
+        _currentUser = profile;
+      });
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _selectedImage = File(image.path);
+      });
+    }
+  }
+
+  Future<void> _handlePost() async {
+    if (_currentUser == null) return;
+    
+    setState(() => _isLoading = true);
+    try {
+      String imageUrl = '';
+      if (_selectedImage != null) {
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+        await Supabase.instance.client.storage
+            .from('posts')
+            .upload(fileName, _selectedImage!);
+        imageUrl = Supabase.instance.client.storage
+            .from('posts')
+            .getPublicUrl(fileName);
+      }
+
+      await PostService().createPost(
+        title: _controller.text.trim(), // Using text as title for now, or we can add title field
+        description: _controller.text.trim(),
+        tags: [], // TODO: Add tag selection
+        imageUrl: imageUrl,
+        collegeId: _currentUser!.college ?? '',
+      );
+
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating post: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -32,8 +98,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Using the first sample user as the current user
-    final user = sampleUsers[0];
+    if (_currentUser == null) {
+      return const Scaffold(
+        backgroundColor: UniRankTheme.bg,
+        body: Center(child: CircularProgressIndicator(color: UniRankTheme.accent)),
+      );
+    }
 
     return Scaffold(
       backgroundColor: UniRankTheme.bg,
@@ -62,24 +132,23 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: _isPostEnabled
-                        ? () {
-                            // TODO: Implement post logic
-                            Navigator.pop(context);
-                          }
+                    onPressed: _isPostEnabled && !_isLoading
+                        ? _handlePost
                         : null,
                     style: TextButton.styleFrom(
                       backgroundColor: _isPostEnabled ? UniRankTheme.accent : UniRankTheme.softGray,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
-                    child: Text(
-                      'Post',
-                      style: TextStyle(
-                        color: _isPostEnabled ? Colors.white : UniRankTheme.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: _isLoading 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text(
+                            'Post',
+                            style: TextStyle(
+                              color: _isPostEnabled ? Colors.white : UniRankTheme.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -96,15 +165,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       children: [
                         CircleAvatar(
                           radius: 24,
-                          backgroundImage: NetworkImage(user.avatar),
+                          backgroundImage: _currentUser!.avatarUrl != null 
+                              ? NetworkImage(_currentUser!.avatarUrl!) 
+                              : const AssetImage('assets/images/leaf_logo.png') as ImageProvider,
                         ),
                         const SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(user.name, style: UniRankTheme.heading(16)),
+                            Text(_currentUser!.fullName, style: UniRankTheme.heading(16)),
                             Text(
-                              '${user.branch} • ${user.year}th Year',
+                              '${_currentUser!.branch ?? "Student"} • ${_currentUser!.year ?? "1"}th Year',
                               style: UniRankTheme.body(12),
                             ),
                           ],
@@ -118,6 +189,39 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       controller: _controller,
                       hintText: 'What do you want to talk about?',
                     ),
+                    const SizedBox(height: 20),
+
+                    // Selected Image Preview
+                    if (_selectedImage != null)
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              _selectedImage!,
+                              width: double.infinity,
+                              height: 200,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: GestureDetector(
+                              onTap: () => setState(() => _selectedImage = null),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close, color: Colors.white, size: 20),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    
                     const SizedBox(height: 30),
 
                     // Attachment Grid
@@ -135,7 +239,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                           icon: Icons.image_outlined,
                           label: 'Photo/Video',
                           color: Colors.blue,
-                          onTap: () {},
+                          onTap: _pickImage,
                         ),
                         AttachmentTile(
                           icon: Icons.gif_box_outlined,
@@ -184,7 +288,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  ToolbarAction(icon: Icons.image_outlined, color: Colors.blue, onTap: () {}),
+                  ToolbarAction(icon: Icons.image_outlined, color: Colors.blue, onTap: _pickImage),
                   ToolbarAction(icon: Icons.gif_box_outlined, color: Colors.purple, onTap: () {}),
                   ToolbarAction(icon: Icons.poll_outlined, color: Colors.orange, onTap: () {}),
                   ToolbarAction(icon: Icons.event_outlined, color: Colors.red, onTap: () {}),
@@ -194,7 +298,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }

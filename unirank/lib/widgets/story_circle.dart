@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../data/sample_data.dart';
+import '../posts/post_model.dart';
 import '../theme.dart';
 
 class StoryCircle extends StatelessWidget {
-  final SampleUser user;
+  final Story? story;
   final bool isAdd;
 
-  const StoryCircle({super.key, required this.user, this.isAdd = false});
+  const StoryCircle({super.key, this.story, this.isAdd = false});
 
   @override
   Widget build(BuildContext context) {
@@ -27,10 +27,10 @@ class StoryCircle extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isAdd ? UniRankTheme.softGray : Colors.transparent,
-              image: isAdd
+              image: isAdd || story == null
                   ? null
                   : DecorationImage(
-                      image: NetworkImage(user.avatar),
+                      image: NetworkImage(story!.imageUrl),
                       fit: BoxFit.cover,
                     ),
             ),
@@ -41,7 +41,7 @@ class StoryCircle extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          isAdd ? 'Add Story' : user.name.split(' ').first,
+          isAdd ? 'Add Story' : (story?.user.fullName.split(' ').first ?? 'User'),
           style: UniRankTheme.body(12),
         ),
       ],

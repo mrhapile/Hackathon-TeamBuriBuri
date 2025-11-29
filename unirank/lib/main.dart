@@ -1,47 +1,48 @@
 import 'package:flutter/material.dart';
 import 'theme.dart';
-import 'screens/feed_screen.dart';
-import 'screens/dashboard_screen.dart';
-import 'screens/profile_screen.dart';
-import 'screens/heatmap_screen.dart';
-import 'screens/create_post_screen.dart';
-import 'screens/splash_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/signup_screen.dart';
-
+import 'widgets/neon_navbar.dart';
+import 'feed/feed_screen.dart';
+import 'feed/dashboard_screen.dart';
+import 'profile/profile_screen.dart';
+import 'profile/heatmap_screen.dart';
+import 'posts/create_post_screen.dart';
+import 'auth/splash_screen.dart';
+import 'auth/login_screen.dart';
+import 'auth/signup_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  
+  // Initialize Supabase
   await Supabase.initialize(
-    url: 'https://wamijvuswksbzdepbusm.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhbWlqdnVzd2tzYnpkZXBidXNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzOTY2MTAsImV4cCI6MjA3OTk3MjYxMH0.uKE0OkVpJSFDH2UffB8iqnP8G4W9BQpxNP7QKvWsT1A',
+    url: 'https://YOUR_SUPABASE_URL.supabase.co', // Replace with actual URL
+    anonKey: 'YOUR_SUPABASE_ANON_KEY', // Replace with actual Key
   );
 
-  runApp(UniRankApp());
+  runApp(const UniRankApp());
 }
 
 class UniRankApp extends StatelessWidget {
   const UniRankApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'UniRank',
-      theme: UniRankTheme.theme(),
-      initialRoute: '/splash',
-      routes: {
-        '/splash': (ctx) => SplashScreen(),
-        '/login': (ctx) => LoginScreen(),
-        '/signup': (ctx) => SignupScreen(),
-        '/feed': (ctx) => FeedScreen(),
-        '/': (ctx) => FeedScreen(),
-        '/dashboard': (ctx) => DashboardScreen(),
-        '/profile': (ctx) => ProfileScreen(),
-        '/heatmap': (ctx) => HeatmapScreen(),
-        '/create-post': (ctx) => CreatePostScreen(),
-      },
       debugShowCheckedModeBanner: false,
+      theme: UniRankTheme.themeData,
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/signup': (context) => const SignupScreen(),
+        '/feed': (context) => const NeonNavbar(), // Main shell
+        '/create-post': (context) => const CreatePostScreen(),
+        '/profile': (context) => const ProfileScreen(), // Keep for direct navigation if needed
+        '/dashboard': (context) => const DashboardScreen(),
+      },
     );
   }
 }
