@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../feed/feed_screen.dart';
-import '../screens/map_screen.dart';
+import '../feed/dashboard_screen.dart';
 import '../screens/chat_screen.dart';
 import '../profile/profile_screen.dart';
+import '../screens/swipe_feed_screen.dart';
 
 class NeonNavbar extends StatefulWidget {
   const NeonNavbar({super.key});
@@ -15,8 +16,8 @@ class NeonNavbar extends StatefulWidget {
 class _NeonNavbarState extends State<NeonNavbar> {
   int currentIndex = 0;
   final List<Widget> pages = [
-    const FeedScreen(),
-    const MapScreen(),
+    const SwipeFeedScreen(),
+    const DashboardScreen(),
     const ChatScreen(),
     const ProfileScreen(),
   ];
@@ -39,7 +40,7 @@ class _NeonNavbarState extends State<NeonNavbar> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(Icons.home_filled, 'Feed', 0),
-                _buildNavItem(Icons.map_outlined, 'Map', 1),
+                _buildNavItem(Icons.dashboard_outlined, 'Dashboard', 1),
                 _buildNavItem(Icons.chat_bubble_outline_rounded, 'Chat', 2),
                 _buildNavItem(Icons.person_outline_rounded, 'Profile', 3),
               ],

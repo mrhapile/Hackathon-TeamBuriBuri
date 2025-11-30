@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../posts/post_model.dart';
+import '../models/story_model.dart';
 import '../theme.dart';
 
 class StoryCircle extends StatelessWidget {
-  final Story? story;
+  final StoryModel? story;
   final bool isAdd;
 
   const StoryCircle({super.key, this.story, this.isAdd = false});
@@ -30,7 +30,7 @@ class StoryCircle extends StatelessWidget {
               image: isAdd || story == null
                   ? null
                   : DecorationImage(
-                      image: NetworkImage(story!.imageUrl),
+                      image: NetworkImage(story!.mediaUrl ?? ''),
                       fit: BoxFit.cover,
                     ),
             ),
@@ -41,7 +41,7 @@ class StoryCircle extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          isAdd ? 'Add Story' : (story?.user.fullName.split(' ').first ?? 'User'),
+          isAdd ? 'Add Story' : (story?.user?.name.split(' ').first ?? 'User'),
           style: UniRankTheme.body(12),
         ),
       ],

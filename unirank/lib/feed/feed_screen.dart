@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme.dart';
 import '../services/post_service.dart';
+import '../services/story_service.dart';
 import '../services/auth_service.dart';
-import '../posts/post_model.dart';
+import '../models/post_model.dart';
+import '../models/story_model.dart';
 import '../widgets/story_circle.dart';
 import '../widgets/post_card.dart';
 import '../widgets/filter_chip.dart';
@@ -16,9 +18,68 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
-  int _navIndex = 0;
+  final PostService _postService = PostService();
+  final StoryService _storyService = StoryService();
+  
+  List<PostModel> _posts = [];
+  List<StoryModel> _stories = [];
+  bool _isLoading = true;
   String _selectedFilter = 'All';
   final List<String> _filters = ['All', 'Web Dev', 'AI/ML', 'App Dev', 'DSA', 'Cloud', 'Backend', 'Python'];
+
+  late final RealtimeChannel _postsChannel;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+    _setupRealtime();
+  }
+
+  Future<void> _fetchData() async {
+    try {
+      final postsData = await _postService.fetchPosts();
+      final storiesData = await _storyService.fetchStories();
+
+      if (mounted) {
+        setState(() {
+          _posts = postsData.map((json) => PostModel.fromJson(json)).toList();
+          _stories = storiesData.map((json) => StoryModel.fromJson(json)).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading feed: $e')),
+        );
+      }
+    }
+  }
+
+  void _setupRealtime() {
+    _postsChannel = Supabase.instance.client.channel('realtime:posts')
+      .onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'posts',
+        callback: (payload) {
+          _fetchData(); // Refresh on any change
+        },
+      )
+      .subscribe();
+  }
+
+  Future<void> _onRefresh() async {
+    await _fetchData();
+  }
+
+  @override
+  void dispose() {
+    Supabase.instance.client.removeChannel(_postsChannel);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,104 +145,97 @@ class _FeedScreenState extends State<FeedScreen> {
             const SizedBox(height: 20),
 
             Expanded(
-              child: StreamBuilder<List<Post>>(
-                stream: PostService().getPostsStream(),
-                builder: (context, postSnapshot) {
-                  final posts = postSnapshot.data ?? [];
-                  
-                  return CustomScrollView(
-                    slivers: [
-                      // Stories Row
-                      SliverToBoxAdapter(
-                        child: SizedBox(
-                          height: 100,
-                          child: FutureBuilder<List<Story>>(
-                            future: PostService().fetchStories(),
-                            builder: (context, storySnapshot) {
-                              final stories = storySnapshot.data ?? [];
-                              return ListView.separated(
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
-                                scrollDirection: Axis.horizontal,
-                                itemCount: stories.length + 1,
-                                separatorBuilder: (_, __) => const SizedBox(width: 16),
-                                itemBuilder: (context, index) {
-                                  if (index == 0) {
-                                    return GestureDetector(
-                                      onTap: () => Navigator.pushNamed(context, '/create-post'),
-                                      child: StoryCircle(isAdd: true),
-                                    );
-                                  }
-                                  return StoryCircle(story: stories[index - 1]);
+              child: RefreshIndicator(
+                onRefresh: _onRefresh,
+                color: UniRankTheme.accent,
+                child: CustomScrollView(
+                  slivers: [
+                    // Stories Row
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 100,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _stories.length + 1,
+                          separatorBuilder: (_, __) => const SizedBox(width: 16),
+                          itemBuilder: (context, index) {
+                            if (index == 0) {
+                              return GestureDetector(
+                                onTap: () {
+                                  // TODO: Implement add story
                                 },
+                                child: const StoryCircle(isAdd: true),
                               );
                             }
-                          ),
+                            return StoryCircle(story: _stories[index - 1]);
+                          },
                         ),
                       ),
+                    ),
 
-                      // Filter Chips
-                      SliverToBoxAdapter(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                          child: Row(
-                            children: _filters.map((filter) {
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: FilterChipWidget(
-                                  label: filter,
-                                  isSelected: _selectedFilter == filter,
-                                  onTap: () => setState(() => _selectedFilter = filter),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
-
-                      // Feed Posts
-                      if (postSnapshot.connectionState == ConnectionState.waiting && posts.isEmpty)
-                         const SliverToBoxAdapter(
-                           child: Padding(
-                             padding: EdgeInsets.all(40),
-                             child: Center(child: CircularProgressIndicator(color: UniRankTheme.accent)),
-                           ),
-                         )
-                      else if (posts.isEmpty)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.all(40),
-                            child: Center(
-                              child: Text(
-                                'No posts yet',
-                                style: UniRankTheme.body(16).copyWith(color: UniRankTheme.textSecondary),
+                    // Filter Chips
+                    SliverToBoxAdapter(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                        child: Row(
+                          children: _filters.map((filter) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: FilterChipWidget(
+                                label: filter,
+                                isSelected: _selectedFilter == filter,
+                                onTap: () => setState(() => _selectedFilter = filter),
                               ),
-                            ),
-                          ),
-                        )
-                      else
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final post = posts[index];
-                                return PostCard(
-                                  post: post,
-                                  onTap: () {
-                                    if (post.user != null) {
-                                      Navigator.pushNamed(context, '/profile', arguments: post.user!.id);
-                                    }
-                                  },
-                                );
-                              },
-                              childCount: posts.length,
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+
+                    // Feed Posts
+                    if (_isLoading)
+                       const SliverToBoxAdapter(
+                         child: Padding(
+                           padding: EdgeInsets.all(40),
+                           child: Center(child: CircularProgressIndicator(color: UniRankTheme.accent)),
+                         ),
+                       )
+                    else if (_posts.isEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(40),
+                          child: Center(
+                            child: Text(
+                              'No posts yet',
+                              style: UniRankTheme.body(16).copyWith(color: UniRankTheme.textSecondary),
                             ),
                           ),
                         ),
-                    ],
-                  );
-                },
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final post = _posts[index];
+                              return PostCard(
+                                post: post,
+                                onTap: () {
+                                  if (post.user != null) {
+                                    Navigator.pushNamed(context, '/profile', arguments: post.user!.id);
+                                  }
+                                },
+                              );
+                            },
+                            childCount: _posts.length,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],

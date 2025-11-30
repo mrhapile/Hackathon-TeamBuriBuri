@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
-import '../services/post_service.dart';
-import '../posts/post_model.dart';
+import '../services/comment_service.dart';
+import '../models/comment_model.dart';
 import '../widgets/custom_input.dart';
 
 class CommentsSheet extends StatefulWidget {
@@ -15,8 +15,8 @@ class CommentsSheet extends StatefulWidget {
 
 class _CommentsSheetState extends State<CommentsSheet> {
   final TextEditingController _controller = TextEditingController();
-  final PostService _postService = PostService();
-  late Future<List<Comment>> _commentsFuture;
+  final CommentService _commentService = CommentService();
+  late Future<List<CommentModel>> _commentsFuture;
   bool _isSending = false;
 
   @override
@@ -27,8 +27,13 @@ class _CommentsSheetState extends State<CommentsSheet> {
 
   void _refreshComments() {
     setState(() {
-      _commentsFuture = _postService.fetchComments(widget.postId);
+      _commentsFuture = _fetchComments();
     });
+  }
+
+  Future<List<CommentModel>> _fetchComments() async {
+    final data = await _commentService.fetchComments(widget.postId);
+    return data.map((json) => CommentModel.fromJson(json)).toList();
   }
 
   Future<void> _sendComment() async {
@@ -37,7 +42,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
 
     setState(() => _isSending = true);
     try {
-      await _postService.addComment(widget.postId, content);
+      await _commentService.addComment(widget.postId, content);
       _controller.clear();
       _refreshComments();
     } catch (e) {
@@ -84,7 +89,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
           const SizedBox(height: 20),
 
           Expanded(
-            child: FutureBuilder<List<Comment>>(
+            child: FutureBuilder<List<CommentModel>>(
               future: _commentsFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -110,8 +115,8 @@ class _CommentsSheetState extends State<CommentsSheet> {
                       children: [
                         CircleAvatar(
                           radius: 16,
-                          backgroundImage: comment.user.avatarUrl != null
-                              ? NetworkImage(comment.user.avatarUrl!)
+                          backgroundImage: comment.user?.avatarUrl != null
+                              ? NetworkImage(comment.user!.avatarUrl!)
                               : const AssetImage('assets/images/leaf_logo.png') as ImageProvider,
                         ),
                         const SizedBox(width: 12),
@@ -121,13 +126,13 @@ class _CommentsSheetState extends State<CommentsSheet> {
                             children: [
                               Row(
                                 children: [
-                                  Text(comment.user.fullName, style: UniRankTheme.heading(14)),
+                                  Text(comment.user?.name ?? 'Unknown', style: UniRankTheme.heading(14)),
                                   const SizedBox(width: 8),
                                   Text('Just now', style: UniRankTheme.body(12).copyWith(color: UniRankTheme.textSecondary)),
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text(comment.content, style: UniRankTheme.body(14)),
+                              Text(comment.text, style: UniRankTheme.body(14)),
                             ],
                           ),
                         ),

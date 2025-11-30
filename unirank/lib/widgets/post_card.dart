@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../posts/post_model.dart';
+import '../models/post_model.dart';
 import '../theme.dart';
 
-import '../services/post_service.dart';
+import '../services/like_service.dart';
 import '../widgets/comments_sheet.dart';
 
 class PostCard extends StatefulWidget {
-  final Post post;
+  final PostModel post;
   final VoidCallback onTap;
 
   const PostCard({super.key, required this.post, required this.onTap});
@@ -33,7 +33,7 @@ class _PostCardState extends State<PostCard> {
     });
 
     try {
-      await PostService().toggleLike(widget.post.id);
+      await LikeService().toggleLike(widget.post.id);
     } catch (e) {
       // Revert if error
       if (mounted) {
@@ -69,20 +69,21 @@ class _PostCardState extends State<PostCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Top Image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-              child: Image.network(
-                widget.post.imageUrl,
-                height: 240,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
+            if (widget.post.imageUrl != null)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                child: Image.network(
+                  widget.post.imageUrl!,
                   height: 240,
-                  color: UniRankTheme.softGray,
-                  child: const Center(child: Icon(Icons.broken_image, color: UniRankTheme.textSecondary)),
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 240,
+                    color: UniRankTheme.softGray,
+                    child: const Center(child: Icon(Icons.broken_image, color: UniRankTheme.textSecondary)),
+                  ),
                 ),
               ),
-            ),
             
             Padding(
               padding: const EdgeInsets.all(20),

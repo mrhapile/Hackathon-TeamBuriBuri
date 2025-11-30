@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme.dart';
 import '../services/post_service.dart';
 import '../services/profile_service.dart';
-import '../profile/user_profile.dart';
+import '../models/profile_model.dart';
 import '../widgets/create_post_widgets.dart';
 
 class CreatePostScreen extends StatefulWidget {
@@ -19,7 +19,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isPostEnabled = false;
   bool _isLoading = false;
-  UserProfile? _currentUser;
+  ProfileModel? _currentUser;
   File? _selectedImage;
 
   @override
@@ -57,7 +57,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     
     setState(() => _isLoading = true);
     try {
-      String imageUrl = '';
+      String? imageUrl;
       if (_selectedImage != null) {
         final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
         await Supabase.instance.client.storage
@@ -69,11 +69,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       }
 
       await PostService().createPost(
-        title: _controller.text.trim(), // Using text as title for now, or we can add title field
+        title: _controller.text.trim(), // Using text as title for now
         description: _controller.text.trim(),
-        tags: [], // TODO: Add tag selection
-        imageUrl: imageUrl,
-        collegeId: _currentUser!.college ?? '',
+        mediaUrl: imageUrl,
+        college: _currentUser!.college ?? '',
+        category: 'General', // Default category
       );
 
       if (mounted) {
@@ -173,7 +173,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(_currentUser!.fullName, style: UniRankTheme.heading(16)),
+                            Text(_currentUser!.name, style: UniRankTheme.heading(16)),
                             Text(
                               '${_currentUser!.branch ?? "Student"} • ${_currentUser!.year ?? "1"}th Year',
                               style: UniRankTheme.body(12),
@@ -298,6 +298,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             ),
           ],
         ),
-      );
+      ),
+    );
   }
 }

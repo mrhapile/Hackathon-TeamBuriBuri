@@ -38,6 +38,7 @@ dependencies:
   flutter_svg: ^2.0.0
   supabase_flutter: ^2.10.3
   image_picker: ^1.0.4
+  appinio_swiper: ^2.0.0
 
 dev_dependencies:
   flutter_test:

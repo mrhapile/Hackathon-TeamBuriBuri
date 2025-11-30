@@ -10,15 +10,17 @@ import 'auth/splash_screen.dart';
 import 'auth/login_screen.dart';
 import 'auth/signup_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+
+import 'env.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Supabase
   await Supabase.initialize(
-    url: 'https://YOUR_SUPABASE_URL.supabase.co', // Replace with actual URL
-    anonKey: 'YOUR_SUPABASE_ANON_KEY', // Replace with actual Key
+    url: Env.supabaseUrl,
+    anonKey: Env.supabaseAnonKey,
   );
 
   runApp(const UniRankApp());
@@ -32,7 +34,7 @@ class UniRankApp extends StatelessWidget {
     return MaterialApp(
       title: 'UniRank',
       debugShowCheckedModeBanner: false,
-      theme: UniRankTheme.themeData,
+      theme: UniRankTheme.theme(),
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
